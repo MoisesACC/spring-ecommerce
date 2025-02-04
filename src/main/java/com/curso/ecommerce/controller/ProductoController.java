@@ -3,14 +3,16 @@ package com.curso.ecommerce.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.multipart.MultipartFile;
 
 import com.curso.ecommerce.model.Producto;
 import com.curso.ecommerce.model.Usuario;
 import com.curso.ecommerce.service.ProductoService;
+import com.curso.ecommerce.service.UploadFileService;
 
 import org.springframework.ui.Model;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import org.slf4j.*;
@@ -24,6 +26,9 @@ public class ProductoController {
     @Autowired
     private ProductoService productoService;
 
+    @Autowired
+    private UploadFileService upload;
+
     @GetMapping("")
     public String show(Model model) {
         model.addAttribute("productos", productoService.findAll());
@@ -36,10 +41,25 @@ public class ProductoController {
     }
 
     @PostMapping("/save")
-    public String save(Producto producto) {
+    public String save(Producto producto, @RequestParam("img") MultipartFile file) throws IOException {
         LOGGER.info("Guardando producto: " + producto);
         Usuario usuario = new Usuario(1, "", "", "", "", "", "", "");
         producto.setUsuario(usuario);
+        // imagen
+        if (producto.getId() == null) { // cuando se crea un producto
+            String nombreImagen = upload.saveImage(file);
+            producto.setImagen(nombreImagen);
+        } else {
+            if (file.isEmpty()) { // Cuando editamos un producto y no se cambia la imagen
+                Producto p = new Producto();
+                p = productoService.get(producto.getId()).get();
+                producto.setImagen(p.getImagen());
+            } else {
+                String nombreImagen = upload.saveImage(file);
+                producto.setImagen(nombreImagen);
+            }
+        }
+
         productoService.save(producto);
         return "redirect:/productos";
     }
@@ -54,6 +74,7 @@ public class ProductoController {
         model.addAttribute("producto", producto);
         return "productos/edit";
     }
+
     @PostMapping("/update")
     public String update(Producto producto) {
         productoService.update(producto);
