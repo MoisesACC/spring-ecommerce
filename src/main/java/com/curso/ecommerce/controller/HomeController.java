@@ -1,6 +1,7 @@
 package com.curso.ecommerce.controller;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.curso.ecommerce.model.*;
+import com.curso.ecommerce.service.IDetalleOrdenService;
+import com.curso.ecommerce.service.IOrdenService;
 import com.curso.ecommerce.service.IUsuarioService;
 import com.curso.ecommerce.service.ProductoService;
 
@@ -31,10 +34,16 @@ public class HomeController {
     @Autowired
     private IUsuarioService usuarioService;
 
-    //para almacenar los detalles de la orden
+    @Autowired
+    private IOrdenService ordenService;
+
+    @Autowired
+    private IDetalleOrdenService detalleOrdenService;
+
+    // para almacenar los detalles de la orden
     List<DetalleOrden> detalles = new ArrayList<DetalleOrden>();
 
-    //para almacenar datos de la orden
+    // para almacenar datos de la orden
     Orden orden = new Orden();
 
     @GetMapping("")
@@ -57,66 +66,62 @@ public class HomeController {
     }
 
     @PostMapping("/cart") // Añadir al carrito
-    public String addCard( @RequestParam Integer id, @RequestParam Integer cantidad, Model model) { // Método para añadir al carrito
+    public String addCard(@RequestParam Integer id, @RequestParam Integer cantidad, Model model) { // Método para añadir
+                                                                                                   // al carrito
 
         DetalleOrden detalleOrden = new DetalleOrden();
         Producto producto = new Producto();
-        double sumaTotal =0;
+        double sumaTotal = 0;
 
         Optional<Producto> optionalProducto = productoService.get(id);
         log.info("Producto encontrado: {}", optionalProducto.get());
         log.info("Cantidad: {}", cantidad);
-        producto=optionalProducto.get();
-
+        producto = optionalProducto.get();
 
         detalleOrden.setCantidad(cantidad);
         detalleOrden.setPrecio(producto.getPrecio());
         detalleOrden.setNombre(producto.getNombre());
-        detalleOrden.setTotal(producto.getPrecio()*cantidad);
+        detalleOrden.setTotal(producto.getPrecio() * cantidad);
         detalleOrden.setProducto(producto);
 
-        //validar que el producto no se repita en el carrito
+        // validar que el producto no se repita en el carrito
         Integer idProducto = producto.getId();
-        
-        //validar si el producto ya fue ingresado
-        boolean ingresado = detalles.stream().anyMatch(p ->p.getProducto().getId()==idProducto);
-        if(!ingresado){
+
+        // validar si el producto ya fue ingresado
+        boolean ingresado = detalles.stream().anyMatch(p -> p.getProducto().getId() == idProducto);
+        if (!ingresado) {
             detalles.add(detalleOrden);
         }
 
-        
-
-        sumaTotal = detalles.stream().mapToDouble(dt->dt.getTotal()).sum();//suma de los totales de los productos
+        sumaTotal = detalles.stream().mapToDouble(dt -> dt.getTotal()).sum();// suma de los totales de los productos
         orden.setTotal(sumaTotal);
         model.addAttribute("cart", detalles);
         model.addAttribute("orden", orden);
-
 
         return "usuario/carrito"; // Redirige a la vista carrito
     }
 
     // Método para eliminar un producto del carrito
-    
+
     @GetMapping("/delete/cart/{id}")
     public String deleteProductCart(@PathVariable Integer id, Model model) {
-        //Lista nueva de detalles de orden
+        // Lista nueva de detalles de orden
         List<DetalleOrden> ordenesNueva = new ArrayList<DetalleOrden>();
-        //Recorremos la lista de detalles de orden
-        for(DetalleOrden detalleOrden:detalles){
-            if(detalleOrden.getProducto().getId()!=id){
+        // Recorremos la lista de detalles de orden
+        for (DetalleOrden detalleOrden : detalles) {
+            if (detalleOrden.getProducto().getId() != id) {
                 ordenesNueva.add(detalleOrden);
             }
         }
-        //poner la nueva lista con los productos restantes
-        detalles=ordenesNueva;
+        // poner la nueva lista con los productos restantes
+        detalles = ordenesNueva;
 
-        double sumaTotal =0;
-        sumaTotal = detalles.stream().mapToDouble(dt->dt.getTotal()).sum();//suma de los totales de los productos
+        double sumaTotal = 0;
+        sumaTotal = detalles.stream().mapToDouble(dt -> dt.getTotal()).sum();// suma de los totales de los productos
         orden.setTotal(sumaTotal);
         model.addAttribute("cart", detalles);
         model.addAttribute("orden", orden);
 
-        
         return "usuario/carrito";
     }
 
@@ -128,7 +133,7 @@ public class HomeController {
     }
 
     @GetMapping("/order")
-    public String order (Model model){
+    public String order(Model model) {
 
         Usuario usuario = usuarioService.findById(1).get();
 
@@ -137,7 +142,29 @@ public class HomeController {
         model.addAttribute("usuario", usuario);
         return "/usuario/resumenorden";
     }
-    
-   
+
+    // Método para guardar la orden
+    @GetMapping("/saveOrder")
+    public String saveOrder() {
+        Date fechaCreacion = new Date();
+        orden.setFechaCreacion(new java.sql.Date(fechaCreacion.getTime()));
+        orden.setNumero(Integer.parseInt(ordenService.generarNumeroOrden()));
+
+        Usuario usuario = usuarioService.findById(1).get();
+        orden.setUsuario(usuario);
+        ordenService.save(orden);
+
+        // Guardar los detalles de la orden
+        for (DetalleOrden dt : detalles) {
+            dt.setOrden(orden);
+            detalleOrdenService.save(dt);
+
+        }
+
+        // Limpiar las listas
+        orden = new Orden();
+        detalles.clear();
+        return "redirect:/";
+    }
 
 }
