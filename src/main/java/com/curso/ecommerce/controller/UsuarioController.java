@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import com.curso.ecommerce.model.Usuario;
 import com.curso.ecommerce.service.IUsuarioService;
 
+import org.springframework.ui.Model;
 import jakarta.servlet.http.HttpSession;
 
 @Controller
@@ -62,5 +63,12 @@ public class UsuarioController {
         }
 
         return "redirect:/";
+    }
+
+    @GetMapping("/compras")
+    public String obtenerCompras(Model model, HttpSession session) {
+        model.addAttribute("sesion", session.getAttribute("idusuario"));
+
+        return "usuario/compras";
     }
 }
