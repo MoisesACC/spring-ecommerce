@@ -161,7 +161,7 @@ public class HomeController {
     public String saveOrder(HttpSession session) {
         Date fechaCreacion = new Date();
         orden.setFechaCreacion(new java.sql.Date(fechaCreacion.getTime()));
-        orden.setNumero(Integer.parseInt(ordenService.generarNumeroOrden()));
+        orden.setNumero(ordenService.generarNumeroOrden());
 
         Usuario usuario = usuarioService.findById(Integer.parseInt(session.getAttribute("idusuario").toString())).get();
         orden.setUsuario(usuario);

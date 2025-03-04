@@ -11,7 +11,7 @@ public class Orden {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    private int numero;
+    private String numero;
     private Date fechaCreacion;
     private Date fechaRecibida;
 
@@ -41,13 +41,13 @@ public class Orden {
 
 
 
-    public int getNumero() {
+    public String getNumero() {
         return numero;
     }
 
 
 
-    public void setNumero(int numero) {
+    public void setNumero(String numero) {
         this.numero = numero;
     }
 
